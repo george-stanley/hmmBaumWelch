@@ -7,13 +7,13 @@ Implements the Baum-Welch expectation maximisation algorithm to update the param
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install hmmBaumWelch.
 
 ```bash
-pip install hmmBaumWelch
+pip install git+https://gitlab.phe.gov.uk/advanced-analytics/hmmbaumwelch.git
 ```
 
 ## Usage
 
 ```python
-import hmmBaumWelch
+from hmmBaumWelch import BaumWelch
 ```
 
 ## Theory
