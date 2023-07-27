@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hmmBaumWelch"
+version = "0.1"
+authors = [{name="George Stanley", email="georgejjstanley@gmail.com"}]
+maintainers = [{name="George Stanley", email="georgejjstanley@gmail.com"}]
+description = "Expectation maximisation and inference for hidden Markov models with discrete observed variables."
+readme = "README.md"
+requires-python = ">=3.9"
+
+
+[project.urls]
+"Homepage" = "https://github.com"
+"Bug Tracker" = "https://github.com"

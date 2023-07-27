@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+setup.cfg
+hmmBaumWelch/BaumWelch.py
+hmmBaumWelch/__init__.py
+hmmBaumWelch.egg-info/PKG-INFO
+hmmBaumWelch.egg-info/SOURCES.txt
+hmmBaumWelch.egg-info/dependency_links.txt
+hmmBaumWelch.egg-info/requires.txt
+hmmBaumWelch.egg-info/top_level.txt
