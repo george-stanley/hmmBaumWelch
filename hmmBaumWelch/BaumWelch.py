@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 
 class BaumWelch:
 
@@ -117,6 +118,26 @@ class BaumWelch:
         else:
             self.observables_weights = None
 
+        # detect whether priors of type array or func
+        self.priors_as_array = type(B_list[0]) == np.ndarray
+
+        # if priors not input as arrays, check they are expected scipy funcs
+        if self.priors_as_array is False:
+
+            # check B_list contains lists or tuples
+            for B in B_list:
+                try:
+                    assert isinstance(B, (tuple, list)), "If not arrays, B_list expected to contain either tuples or lists of the prior probability distributions."
+                except AssertionError:
+                    raise
+
+                # check either a scipy discrete or continuous frozen func
+                for Bi in B:
+                    try:
+                        assert isinstance(Bi, (stats._distn_infrastructure.rv_discrete_frozen, stats._distn_infrastructure.rv_continuous_frozen)), "If not arrays, priors expected as either Scipy rv_discrete_frozen or  rv_continuous_frozen objects."
+                    except AssertionError:
+                        raise
+
         # store useful probabilities and inferences when calculated
         self.gamma = None
         self.xi = None
@@ -154,11 +175,24 @@ class BaumWelch:
             Emission probability extracted from the emission probability vector.
         """
 
-        # find index location of the observed value within the first leaf
-        idx = np.where(B[zi, :, 0] == o)[0][0]
+        if self.priors_as_array:
 
-        # extract concomitant emission probability stored in the next leaf
-        b_oi = B[zi, idx, 1]
+            # find index location of the observed value within the first leaf
+            idx = np.where(B[zi, :, 0] == o)[0][0]
+
+            # extract concomitant emission probability stored in the next leaf
+            b_oi = B[zi, idx, 1]
+
+        else: # from scipy probability distribution
+
+            # bring out prior func
+            Bi = B[zi]
+
+            # check if discrete or continuous and find emission prob
+            if type(Bi) == stats._distn_infrastructure.rv_discrete_frozen:
+                b_oi = Bi.pmf(o)
+            else:
+                b_oi = Bi.pdf(o)
 
         return b_oi
 
