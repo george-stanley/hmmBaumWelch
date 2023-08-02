@@ -58,10 +58,6 @@ class BaumWelch:
         Also returns the hidden state inference.
     """
 
-    # class variable assigned for the early stopping parameter
-    log_likelihood_p_delta = 0.005
-    rolling_deltas = 3
-
     def __init__(
         self,
         Z: set[int],
@@ -70,7 +66,6 @@ class BaumWelch:
         A: np.ndarray,
         B_list: list[np.ndarray],
         observables_weights: list[float] = None,
-        early_stopping : bool=True,
     ):
 
         """
@@ -103,8 +98,6 @@ class BaumWelch:
         self.N = len(Z)
         self.T = len(O_list[0])
         self.R = len(O_list)
-
-        self.early_stopping = early_stopping
 
         # if observables weights is not none, scale and turn into array
         if observables_weights is not None:
@@ -613,6 +606,10 @@ class BaumWelch:
         update_pi: bool = True,
         update_A: bool = True,
         update_B: bool = True,
+        early_stopping: bool=True,
+        log_likelihood_p_delta: float=0.005,
+        rolling_deltas: int=3,
+
     ) -> tuple[np.ndarray]:
 
         """
@@ -654,7 +651,7 @@ class BaumWelch:
                 ]
 
             # if implementing early stopping
-            if self.early_stopping:
+            if early_stopping:
 
                 # compute log-likelihood
                 log_likelihood_alpha = self.log_likelihood()
@@ -663,14 +660,17 @@ class BaumWelch:
                 if i == 0:
                     log_likelihood_alpha_prev = log_likelihood_alpha
 
+                # calculate difference and store values
                 log_likelihood_delta = abs(log_likelihood_alpha - log_likelihood_alpha_prev)
                 log_likelihood_deltas.append(log_likelihood_delta)
 
-                if i>=self.rolling_deltas:
-                    deltas = np.array(log_likelihood_deltas[i:i+self.rolling_deltas], dtype=np.float64)
+                # look at rolling average of differences
+                if i>=rolling_deltas:
+                    deltas = np.array(log_likelihood_deltas[i:i+rolling_deltas], dtype=np.float64)
                     rolling_mean = deltas.mean()
 
-                    if rolling_mean<self.log_likelihood_p_delta:
+                    # if threshold larger than rolled averages, stop
+                    if rolling_mean<log_likelihood_p_delta:
                         print(f"Early stopping converged on iteration {i}.")
                         break
                     
