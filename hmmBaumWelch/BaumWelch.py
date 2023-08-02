@@ -58,6 +58,10 @@ class BaumWelch:
         Also returns the hidden state inference.
     """
 
+    # class variable assigned for the early stopping parameter
+    log_likelihood_p_delta = 0.005
+    rolling_deltas = 3
+
     def __init__(
         self,
         Z: set[int],
@@ -66,6 +70,7 @@ class BaumWelch:
         A: np.ndarray,
         B_list: list[np.ndarray],
         observables_weights: list[float] = None,
+        early_stopping : bool=True,
     ):
 
         """
@@ -99,6 +104,8 @@ class BaumWelch:
         self.T = len(O_list[0])
         self.R = len(O_list)
 
+        self.early_stopping = early_stopping
+
         # if observables weights is not none, scale and turn into array
         if observables_weights is not None:
 
@@ -118,8 +125,6 @@ class BaumWelch:
             self.observables_weights = None
 
         # store useful probabilities and inferences when calculated
-        self.alpha = None
-        self.beta = None
         self.gamma = None
         self.xi = None
         self.Z0_probs = None
@@ -212,7 +217,7 @@ class BaumWelch:
                     # extract a constant for the log-sum-exp trick (take max alpha path value)
                     c = alpha_paths.max()
 
-                    # shift values by max val (i.e. max val now = 0) and exponentiate
+                    # # shift values by max val (i.e. max val now = 0) and exponentiate
                     alpha_paths = np.exp(alpha_paths - c)
 
                     # calculate log of alpha
@@ -484,6 +489,25 @@ class BaumWelch:
         )
 
         return gamma, xi
+    
+    def log_likelihood(self):
+
+        """
+        Computes the log-likelihood of alpha:
+        
+        - alpha_{i}(t) = P(o_{1:t}, Z_{t} | theta), and where theta = (A,B,pi).
+
+        This is simply the sum of the log of alpha.
+
+        - log-likelihood = sum(log(alpha)).
+
+        This enables the implementation of a simple "early stopping" approach to the Baum-Welch expectation maximisation iterative optimisation.
+        """
+
+        # log_likelihood_alpha = np.sum(alpha_log)
+        log_likelihood_alpha = np.average(self.alpha_log[:,-1,:])
+
+        return log_likelihood_alpha
 
     def B_update(self, gamma: np.ndarray, B: np.ndarray, O: list[int]):
 
@@ -606,7 +630,10 @@ class BaumWelch:
             Whether to update the emission probabilities.
         """
 
-        for _ in range(iter):
+        # instantiate
+        log_likelihood_deltas = []
+
+        for i in range(iter):
 
             # forwards-backwards algorithm across all observables
             gamma, xi = self.forwards_backwards_algorithm()
@@ -625,6 +652,30 @@ class BaumWelch:
                     self.B_update(gamma[:, :, r], B, O)
                     for r, (B, O) in enumerate(zip(self.B_list, self.O_list))
                 ]
+
+            # if implementing early stopping
+            if self.early_stopping:
+
+                # compute log-likelihood
+                log_likelihood_alpha = self.log_likelihood()
+
+                # assign log_likelihood_alpha_prev for first iteration
+                if i == 0:
+                    log_likelihood_alpha_prev = log_likelihood_alpha
+
+                log_likelihood_delta = abs(log_likelihood_alpha - log_likelihood_alpha_prev)
+                log_likelihood_deltas.append(log_likelihood_delta)
+
+                if i>=self.rolling_deltas:
+                    deltas = np.array(log_likelihood_deltas[i:i+self.rolling_deltas], dtype=np.float64)
+                    rolling_mean = deltas.mean()
+
+                    if rolling_mean<self.log_likelihood_p_delta:
+                        print(f"Early stopping converged on iteration {i}.")
+                        break
+                    
+                # assign log_likelihood_alpha_prev for next iteration
+                log_likelihood_alpha_prev = log_likelihood_alpha
 
         # store final gamma and xi arrays as attributes
         self.gamma = gamma
