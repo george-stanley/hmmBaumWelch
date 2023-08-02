@@ -671,7 +671,7 @@ class BaumWelch:
 
                     # if threshold larger than rolled averages, stop
                     if rolling_mean<log_likelihood_p_delta:
-                        print(f"Early stopping converged on iteration {i}.")
+                        print(f"Early stopping converged on iteration {i+1}.")
                         break
                     
                 # assign log_likelihood_alpha_prev for next iteration
