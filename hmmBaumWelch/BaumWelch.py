@@ -1,5 +1,7 @@
 import numpy as np
 from scipy import stats
+from scipy.stats._continuous_distns import rv_histogram
+from scipy.stats._distn_infrastructure import rv_discrete_frozen, rv_continuous_frozen
 
 class BaumWelch:
 
@@ -25,8 +27,9 @@ class BaumWelch:
         Probabilities of being in each hidden Markov state at t=1.
     A : np.ndarray[float]
         Transmission probabilities matrix, of dims (N,N), where N=number of hidden states.
-    B_list : list[np.ndarray[float]]
-        List of emission probability matrices, each of dims (N,K_{r}), where K_{r}=number of different possible observations for observed variable O_{r}.
+    B_list : list[np.ndarray[float]] | list[tuple[rv_discrete_frozen | rv_continuous_frozen | rv_histogram]]
+        List of emission probability matrices, each of dims (N,K_{r}), where K_{r}=number of different possible observations for observed variable O_{r}. Can also be given as a list of tuples,
+        in which each tuple contains Scipy probability distribution functions that define the prior. These can be of type rv_discrete_frozen, rv_continuous_frozen, or rv_histogram.
     observables_weights : np.ndarray, default=None
         Weighted values for the observable variables when performing inference (note, these values do not affect the transition probability matrix, A).
     N : int
@@ -134,7 +137,9 @@ class BaumWelch:
                 # check either a scipy discrete or continuous frozen func
                 for Bi in B:
                     try:
-                        assert isinstance(Bi, (stats._distn_infrastructure.rv_discrete_frozen, stats._distn_infrastructure.rv_continuous_frozen)), "If not arrays, priors expected as either Scipy rv_discrete_frozen or  rv_continuous_frozen objects."
+                        assert isinstance(Bi, (rv_discrete_frozen, 
+                                               rv_continuous_frozen, 
+                                               rv_histogram)), "If not arrays, priors expected as Scipy rv_discrete_frozen, rv_continuous_frozen objects, or rv_histogram objects."
                     except AssertionError:
                         raise
 
@@ -153,7 +158,12 @@ class BaumWelch:
 
         return f"{self.N} hidden states; {self.T} time points; initial state probability P(Z0) = {self.pi[0]}; transition probs: Z0 -> Z0 = {self.A[0,0].round(decimals=3)} and Z1 -> Z1 = {self.A[1,1].round(decimals=3)}."
 
-    def B_oi(self, B: np.ndarray, zi: int, o: int) -> np.float32:
+    def B_oi(
+        self, 
+            B: np.ndarray | rv_discrete_frozen | rv_continuous_frozen | rv_histogram, 
+            zi: int, 
+            o: int
+    ) -> np.float32:
 
         """
         Finds the emission probability, b_{i}(o), of observing a given variable value, o, in a given state.
@@ -189,12 +199,66 @@ class BaumWelch:
             Bi = B[zi]
 
             # check if discrete or continuous and find emission prob
-            if type(Bi) == stats._distn_infrastructure.rv_discrete_frozen:
+            if type(Bi) == rv_discrete_frozen:
                 b_oi = Bi.pmf(o)
             else:
                 b_oi = Bi.pdf(o)
 
+        # can never return a 0 prob, as Python will represent the log of this as -inf, which will ruin NAN all future calculations, so instead return smallest positive value possible in Python
+        b_oi = b_oi if b_oi != 0 else 5e-324
+
         return b_oi
+    
+    def priors_to_array(self):
+        
+        """
+        Converts prior distributions from Scipy functions into np.ndarrays. This improves performance during expectation maximisation.
+
+        Returns
+        -------
+        B_arrays_list: list[np.ndarray]
+            Prior emission probabilities, for each observable, as arrays with dims (N,K,2).
+        """
+
+        # check not already arrays
+        if self.priors_as_array:
+            print("Priors already given as arrays.")
+            return self.B_list
+
+        B_arrays_list = []
+
+        # for each observed variable
+        for Or, Br in zip(self.O_list, self.B_list):
+
+            # sort the observed variable
+            Or = list(set(Or))
+            Or.sort()
+
+            K = len(Or)
+
+            B = np.zeros((self.N, K, 2), dtype=np.float64)
+
+            # for each prior, corresponding to a hidden state, for that variable
+            for i, Bri in enumerate(Br):
+
+                # check if discrete or continuous and find emission prob
+                if type(Bri) == rv_discrete_frozen:
+                    for k, oi in enumerate(Or):
+                        B[i, k, 0] = oi
+                        B[i, k, 1] = Bri.pmf(oi)
+                else:
+                    for k, oi in enumerate(Or):
+                        B[i, k, 0] = oi
+                        B[i, k, 1] = Bri.pdf(oi)
+
+            # save arrays in list
+            B_arrays_list.append(B)
+
+        # overwrite instance attributes
+        self.B_list = B_arrays_list
+        self.priors_as_array = True
+
+        return B_arrays_list
 
     def forwards_compute(self, O: list[int], B: np.ndarray) -> np.ndarray:
 
@@ -661,6 +725,9 @@ class BaumWelch:
             Whether to update the emission probabilities.
         """
 
+        if update_B and self.priors_as_array is False:
+            print("Can only update priors, B, if given as arrays.")
+
         # instantiate
         log_likelihood_deltas = []
 
@@ -677,8 +744,8 @@ class BaumWelch:
             if update_A:
                 self.A = self.A_multiple_obs_update(gamma, xi)
 
-            # update emission probs
-            if update_B:
+            # update emission probs (can only do so if Priors given as arrays)
+            if update_B and self.priors_as_array:
                 self.B_list = [
                     self.B_update(gamma[:, :, r], B, O)
                     for r, (B, O) in enumerate(zip(self.B_list, self.O_list))
