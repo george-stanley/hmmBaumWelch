@@ -103,6 +103,13 @@ class BaumWelch:
         self.T = len(O_list[0])
         self.R = len(O_list)
 
+        # perform some quality checks on dims of inputs
+        try:
+            assert (len(pi) == self.N) and (A.shape[0] == self.N) and (A.shape[1] == self.N), "Dimensions of `Z`, `pi`, and `A` must match."
+            assert len(O_list) == len(B_list), "Dimensions of `O_list` and `B_list` must match."
+        except AssertionError:
+            raise
+
         # if observables weights is not none, scale and turn into array
         if observables_weights is not None:
 
@@ -121,8 +128,9 @@ class BaumWelch:
         else:
             self.observables_weights = None
 
-        # detect whether priors of type array or func
-        self.priors_as_array = type(B_list[0]) == np.ndarray
+        # check for data types of prob funcs, and if any not a numpy array, assign the bool
+        for B in B_list:
+            self.priors_as_array = type(B) is np.ndarray
 
         # if priors not input as arrays, check they are expected scipy funcs
         if self.priors_as_array is False:
@@ -142,6 +150,9 @@ class BaumWelch:
                                                rv_histogram)), "If not arrays, priors expected as Scipy rv_discrete_frozen, rv_continuous_frozen objects, or rv_histogram objects."
                     except AssertionError:
                         raise
+
+            # if all tests passed, turn into arrays to improve expectation maximisation performance
+            self.priors_to_array()
 
         # store useful probabilities and inferences when calculated
         self.gamma = None
@@ -163,7 +174,7 @@ class BaumWelch:
             B: np.ndarray | rv_discrete_frozen | rv_continuous_frozen | rv_histogram, 
             zi: int, 
             o: int
-    ) -> np.float32:
+    ) -> np.float64:
 
         """
         Finds the emission probability, b_{i}(o), of observing a given variable value, o, in a given state.
@@ -234,15 +245,21 @@ class BaumWelch:
             Or = list(set(Or))
             Or.sort()
 
+            # number of possible values, oi
             K = len(Or)
 
+            # instantiate np.ndarray with correct dimensions for obervable Or
             B = np.zeros((self.N, K, 2), dtype=np.float64)
 
             # for each prior, corresponding to a hidden state, for that variable
             for i, Bri in enumerate(Br):
 
-                # check if discrete or continuous and find emission prob
-                if type(Bri) == rv_discrete_frozen:
+                # check if this particular prior is an array
+                if type(Bri) == np.ndarray:
+                    continue
+
+                # otherwise check if discrete or continuous prob func and find emission prob
+                elif type(Bri) == rv_discrete_frozen:
                     for k, oi in enumerate(Or):
                         B[i, k, 0] = oi
                         B[i, k, 1] = Bri.pmf(oi)
@@ -258,7 +275,7 @@ class BaumWelch:
         self.B_list = B_arrays_list
         self.priors_as_array = True
 
-        return B_arrays_list
+        return self
 
     def forwards_compute(self, O: list[int], B: np.ndarray) -> np.ndarray:
 
@@ -287,7 +304,7 @@ class BaumWelch:
         with np.errstate(divide='ignore'):
 
             # instantiate alpha_log
-            alpha_log = np.zeros((self.N, self.T), dtype=np.float32)
+            alpha_log = np.zeros((self.N, self.T), dtype=np.float64)
 
             # initalisation
             for i in self.Z:
@@ -295,7 +312,7 @@ class BaumWelch:
 
             # recursion with log-sum-exp trick
             alpha_paths = np.zeros(
-                (self.N, 1), dtype=np.float32
+                (self.N, 1), dtype=np.float64
             )  # instantiate array once outside of loop (then overwrite iteratively)
 
             for t in range(self.T - 1):
@@ -344,7 +361,7 @@ class BaumWelch:
         with np.errstate(divide='ignore'):
 
             # instantiate beta_log
-            beta_log = np.zeros((self.N, self.T), dtype=np.float32)
+            beta_log = np.zeros((self.N, self.T), dtype=np.float64)
 
             # initalisation
             for i in self.Z:
@@ -352,7 +369,7 @@ class BaumWelch:
 
             # recursion, iterating backwards
             beta_paths = np.zeros(
-                (self.N, 1), dtype=np.float32
+                (self.N, 1), dtype=np.float64
             )  # instantiate array once outside of loop (then overwrite iteratively)
 
             for t in range(self.T - 2, -1, -1):  # akin to T-2:-1:0 inclusive
@@ -403,10 +420,10 @@ class BaumWelch:
         with np.errstate(divide='ignore'):
 
             # instantiate gamma
-            gamma_log = np.zeros((self.N, self.T), dtype=np.float32)
+            gamma_log = np.zeros((self.N, self.T), dtype=np.float64)
 
             # instantiate ais array, where a_{i} = log(alpha_{i}(t)) + log(beta_{i}(t))
-            ais = np.zeros((self.N, 1), dtype=np.float32)
+            ais = np.zeros((self.N, 1), dtype=np.float64)
 
             # iterate through series
             for t in range(self.T):
@@ -483,10 +500,10 @@ class BaumWelch:
         with np.errstate(divide='ignore'):
 
             # instantiate xi
-            xi_log = np.zeros((self.N, self.N, self.T - 1), dtype=np.float32)
+            xi_log = np.zeros((self.N, self.N, self.T - 1), dtype=np.float64)
 
             # instantiate array
-            numerators_log = np.zeros((self.N, self.N), dtype=np.float32)
+            numerators_log = np.zeros((self.N, self.N), dtype=np.float64)
 
             # iterate through series
             for t in range(self.T - 1):
@@ -540,10 +557,10 @@ class BaumWelch:
         """
 
         # instantiate arrays for gamma and xi, including the R dimension
-        alpha_log = np.zeros((self.N, self.T, self.R), dtype=np.float32)
-        beta_log = np.zeros((self.N, self.T, self.R), dtype=np.float32)
-        gamma = np.zeros((self.N, self.T, self.R), dtype=np.float32)
-        xi = np.zeros((self.N, self.N, self.T - 1, self.R), dtype=np.float32)
+        alpha_log = np.zeros((self.N, self.T, self.R), dtype=np.float64)
+        beta_log = np.zeros((self.N, self.T, self.R), dtype=np.float64)
+        gamma = np.zeros((self.N, self.T, self.R), dtype=np.float64)
+        xi = np.zeros((self.N, self.N, self.T - 1, self.R), dtype=np.float64)
 
         # iterate through all observables (with appropriate emission probs matrix)
         for r, (O_r, B_r) in enumerate(zip(self.O_list, self.B_list)):
@@ -621,7 +638,7 @@ class BaumWelch:
         """
 
         # instantiate new transmission probabilities matrix
-        B_update = np.zeros((B.shape), dtype=np.float32)
+        B_update = np.zeros((B.shape), dtype=np.float64)
 
         # take the sums for gamma in all N states along the t axis
         gamma_i_sum = gamma.sum(axis=1).reshape(self.N, 1)
@@ -686,7 +703,7 @@ class BaumWelch:
         """
 
         # instantiate array
-        A_update = np.zeros((self.N, self.N), dtype=np.float32)
+        A_update = np.zeros((self.N, self.N), dtype=np.float64)
 
         # sum arrays along T axis and then R axis (which will be final axis=-1)
         gamma_sum = gamma[:, :-1, :].sum(axis=(1, -1)).reshape(self.N, 1)
