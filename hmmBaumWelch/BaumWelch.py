@@ -841,4 +841,7 @@ class BaumWelch:
         for t in range(self.T):
             Z_inference[0, t] = gamma_meanR[:, t].argmax()
 
+        # save out the inferred states as instance attribute
+        self.Z_inferences = Z_inference
+
         return Z0_prob, Z1_prob, Z_inference, gamma_meanR
