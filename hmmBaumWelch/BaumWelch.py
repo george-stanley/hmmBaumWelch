@@ -1,7 +1,11 @@
 import numpy as np
 from scipy import stats
+from typing import Union
 from scipy.stats._continuous_distns import rv_histogram
 from scipy.stats._distn_infrastructure import rv_discrete_frozen, rv_continuous_frozen
+
+# define some type hints that Python 3.9 otherwise cannot handle
+arrays_scipy_typeHint = Union[np.ndarray, rv_discrete_frozen, rv_continuous_frozen, rv_histogram]
 
 class BaumWelch:
 
@@ -171,7 +175,7 @@ class BaumWelch:
 
     def B_oi(
         self, 
-            B: np.ndarray | rv_discrete_frozen | rv_continuous_frozen | rv_histogram, 
+            B: arrays_scipy_typeHint, 
             zi: int, 
             o: int
     ) -> np.float64:
