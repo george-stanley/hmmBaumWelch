@@ -751,7 +751,7 @@ class BaumWelch:
 
         # check that iter is a positive integer
         try:
-            assert (isinstance(iter, int) and (iter>=1)), "`iter` must be a positive integer."
+            assert (isinstance(iter, int) and (iter>=1)), "`iter` must be a positive integer greater than 0."
         except AssertionError:
             raise
 
