@@ -749,6 +749,12 @@ class BaumWelch:
         if update_B and self.priors_as_array is False:
             print("Can only update priors, B, if given as arrays.")
 
+        # check that iter is a positive integer
+        try:
+            assert (isinstance(iter, int) and (iter>=1)), "`iter` must be a positive integer."
+        except AssertionError:
+            raise
+
         # instantiate
         log_likelihood_deltas = []
 
