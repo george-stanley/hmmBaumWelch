@@ -49,6 +49,7 @@ Untitled*.ipynb
 *.so
 
 # Distribution / packaging
+.pytest_cache
 .Python
 env/
 build/
