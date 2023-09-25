@@ -117,11 +117,14 @@ class BaumWelch:
         # if observables weights is not none, scale and turn into array
         if observables_weights is not None:
 
-            # first, assert of correct dimensions
+            # first, assert list of correct dimensions with non-zero, positive values
             try:
+                assert isinstance(observables_weights, list), "`observables_weights` should be of type `list`."
                 assert self.R == len(
                     observables_weights
                 ), "Length(observables_weights) does not match number of observed variables."
+                assert all(weight >=0 for weight in observables_weights), "`observables_weights` must contain positive, real numbers."
+                assert any(weight !=0 for weight in observables_weights), "`observables_weights` must contain at least one non-zero value."
             except AssertionError:
                 raise
             # turn into array for easy broadcasting
