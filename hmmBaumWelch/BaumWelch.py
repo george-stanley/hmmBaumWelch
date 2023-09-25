@@ -152,8 +152,8 @@ class BaumWelch:
                 # check either a scipy discrete or continuous frozen func
                 for Bi in B:
                     try:
-                        assert isinstance(Bi, (rv_discrete_frozen, 
-                                               rv_continuous_frozen, 
+                        assert isinstance(Bi, (rv_discrete_frozen,
+                                               rv_continuous_frozen,
                                                rv_histogram)), "If not arrays, priors expected as Scipy rv_discrete_frozen, rv_continuous_frozen objects, or rv_histogram objects."
                     except AssertionError:
                         raise
@@ -177,9 +177,9 @@ class BaumWelch:
         return f"{self.N} hidden states; {self.T} time points; initial state probability P(Z0) = {self.pi[0]}; transition probs: Z0 -> Z0 = {self.A[0,0].round(decimals=3)} and Z1 -> Z1 = {self.A[1,1].round(decimals=3)}."
 
     def B_oi(
-        self, 
-            B: arrays_scipy_typeHint, 
-            zi: int, 
+        self,
+            B: arrays_scipy_typeHint,
+            zi: int,
             o: int
     ) -> np.float64:
 
@@ -226,9 +226,9 @@ class BaumWelch:
         b_oi = b_oi if b_oi != 0 else 5e-324
 
         return b_oi
-    
+
     def priors_to_array(self):
-        
+
         """
         Converts prior distributions from Scipy functions into np.ndarrays. This improves performance during expectation maximisation.
 
@@ -604,12 +604,12 @@ class BaumWelch:
         )
 
         return gamma, xi
-    
+
     def log_likelihood(self):
 
         """
         Computes the log-likelihood of alpha:
-        
+
         - alpha_{i}(t) = P(o_{1:t}, Z_{t} | theta), and where theta = (A,B,pi).
 
         This is simply the sum of the log of alpha.
@@ -804,7 +804,7 @@ class BaumWelch:
                     if rolling_mean<log_likelihood_p_delta:
                         print(f"Early stopping converged on iteration {i+1}.")
                         break
-                    
+
                 # assign log_likelihood_alpha_prev for next iteration
                 log_likelihood_alpha_prev = log_likelihood_alpha
 
@@ -813,7 +813,7 @@ class BaumWelch:
         self.xi = xi
 
         return self
-    
+
     def Z_state_probs_inference(self, **kwargs : dict) -> tuple[np.ndarray]:
 
         """

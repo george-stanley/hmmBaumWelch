@@ -48,12 +48,12 @@ class PriorDistributionArrays:
         """
 
         # find min and max vals and dims of range
-        K_max = self.df[observable].max() 
+        K_max = self.df[observable].max()
         K_min = self.df[observable].min()
         K = (K_max - K_min) + 1
 
         return K, K_min, K_max
-    
+
     def B_instantiate(self, observable : str):
 
         """
@@ -136,7 +136,7 @@ class PriorDistributionArrays:
             B[0,i,1] = poisson.pmf(oi, mu)
 
         return B
-    
+
     @ staticmethod
     def concatenate_B_array(B_arrays_list : list):
 
@@ -175,4 +175,3 @@ class PriorDistributionArrays:
             B[Ni, :, :] = Bi
 
         return B
- 
