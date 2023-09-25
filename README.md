@@ -1,6 +1,6 @@
 # hmmBaumWelch
 
-Implements the Baum-Welch expectation maximisation algorithm to update the parameters and perform inference on hidden Markov models (HMM) with observed time-series data v(for one or multiple variables). In brief, this package maximises the local probabilty of observing the given sequence of variables by updating the HMM initial state, prior, and transition state probabilities. It then performs inference to give the hidden state sequence as well as rendering the probability of a given hidden state at each time point.
+Implements the Baum-Welch expectation maximisation algorithm to update the parameters and perform inference on hidden Markov models (HMM) with observed time-series data (for one or multiple variables). In brief, this package maximises the local probabilty of observing the given sequence of variables by updating the HMM initial state, prior, and transition state probabilities. It then performs inference to give the hidden state sequence as well as rendering the probability of a given hidden state at each time point.
 
 The package is designed to work with SciPy's probability distribution functions to simplify the defining of the Bayesian priors for each variable and state; and a simple form of "early stopping" has been implemented to optimise performance.
 
