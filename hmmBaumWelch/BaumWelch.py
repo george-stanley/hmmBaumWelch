@@ -117,11 +117,14 @@ class BaumWelch:
         # if observables weights is not none, scale and turn into array
         if observables_weights is not None:
 
-            # first, assert of correct dimensions
+            # first, assert list of correct dimensions with non-zero, positive values
             try:
+                assert isinstance(observables_weights, list), "`observables_weights` should be of type `list`."
                 assert self.R == len(
                     observables_weights
                 ), "Length(observables_weights) does not match number of observed variables."
+                assert all(weight >=0 for weight in observables_weights), "`observables_weights` must contain positive, real numbers."
+                assert any(weight !=0 for weight in observables_weights), "`observables_weights` must contain at least one non-zero value."
             except AssertionError:
                 raise
             # turn into array for easy broadcasting
@@ -149,8 +152,8 @@ class BaumWelch:
                 # check either a scipy discrete or continuous frozen func
                 for Bi in B:
                     try:
-                        assert isinstance(Bi, (rv_discrete_frozen, 
-                                               rv_continuous_frozen, 
+                        assert isinstance(Bi, (rv_discrete_frozen,
+                                               rv_continuous_frozen,
                                                rv_histogram)), "If not arrays, priors expected as Scipy rv_discrete_frozen, rv_continuous_frozen objects, or rv_histogram objects."
                     except AssertionError:
                         raise
@@ -174,9 +177,9 @@ class BaumWelch:
         return f"{self.N} hidden states; {self.T} time points; initial state probability P(Z0) = {self.pi[0]}; transition probs: Z0 -> Z0 = {self.A[0,0].round(decimals=3)} and Z1 -> Z1 = {self.A[1,1].round(decimals=3)}."
 
     def B_oi(
-        self, 
-            B: arrays_scipy_typeHint, 
-            zi: int, 
+        self,
+            B: arrays_scipy_typeHint,
+            zi: int,
             o: int
     ) -> np.float64:
 
@@ -223,9 +226,9 @@ class BaumWelch:
         b_oi = b_oi if b_oi != 0 else 5e-324
 
         return b_oi
-    
+
     def priors_to_array(self):
-        
+
         """
         Converts prior distributions from Scipy functions into np.ndarrays. This improves performance during expectation maximisation.
 
@@ -601,12 +604,12 @@ class BaumWelch:
         )
 
         return gamma, xi
-    
+
     def log_likelihood(self):
 
         """
         Computes the log-likelihood of alpha:
-        
+
         - alpha_{i}(t) = P(o_{1:t}, Z_{t} | theta), and where theta = (A,B,pi).
 
         This is simply the sum of the log of alpha.
@@ -751,7 +754,7 @@ class BaumWelch:
 
         # check that iter is a positive integer
         try:
-            assert (isinstance(iter, int) and (iter>=1)), "`iter` must be a positive integer."
+            assert (isinstance(iter, int) and (iter>=1)), "`iter` must be a positive integer greater than 0."
         except AssertionError:
             raise
 
@@ -801,7 +804,7 @@ class BaumWelch:
                     if rolling_mean<log_likelihood_p_delta:
                         print(f"Early stopping converged on iteration {i+1}.")
                         break
-                    
+
                 # assign log_likelihood_alpha_prev for next iteration
                 log_likelihood_alpha_prev = log_likelihood_alpha
 
@@ -810,7 +813,7 @@ class BaumWelch:
         self.xi = xi
 
         return self
-    
+
     def Z_state_probs_inference(self, **kwargs : dict) -> tuple[np.ndarray]:
 
         """

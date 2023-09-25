@@ -1,0 +1,24 @@
+# Configuration file to store HMM parameters
+
+# single variables
+N: 2 # number of hidden states
+T: 3 # number of time points in data
+K: 3 # number of different values of a variable - deliberately set to equal T for both variables
+R: 2 # number of observed variables
+
+# observed variables
+O0: [0, 4, 1]
+O1: [-0.1, 0.9, 0.1]
+
+# priors associated with Or
+B_i0_r0: [0.4, 0.025, 0.3]
+B_i1_r0: [0.05, 0.4, 0.05]
+B_i0_r1: [0.25, 0.075, 0.15]
+B_i1_r1: [0.10, 0.25, 0.10]
+
+# HMM starting parameters (set of hidden states; probability of starting in state Z0; transition probs: P(Z0 -> Z0) and P(Z1 ->Z1))
+Z: [0, 1]
+pi_Z0: 0.5
+A_Z0_Z0: 0.8
+A_Z1_Z1: 0.8
+observables_weights: [1,1]

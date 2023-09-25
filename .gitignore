@@ -49,6 +49,7 @@ Untitled*.ipynb
 *.so
 
 # Distribution / packaging
+.pytest_cache
 .Python
 env/
 build/
@@ -131,5 +132,3 @@ target/
 # personal git setup script
 git_setup.sh
 .Rproj.user
-
-
