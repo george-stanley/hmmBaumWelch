@@ -42,7 +42,7 @@ B_R = [B0, B1]
 A = np.array([[0.80, 0.20],
             [0.20, 0.80]], dtype=np.float64)
 pi = [0.50, 0.50]
-O_weights = [1,1] # treat each variable equally
+observables_weights = [1,1] # treat each variable equally
 Z = (0,1) # set of hidden states
 
 @pytest.fixture
@@ -51,7 +51,6 @@ def run_BaumWelch():
     Runs the initiates the BaumWelch object and runs 1 iteration of expectation maximisation.
     The results are used in testing.
     """
-
     # create the HMM object
     HMM = BaumWelch(
         Z,
@@ -59,45 +58,13 @@ def run_BaumWelch():
         pi,
         A,
         B_R,
-        O_weights,  # Use the default O_weights
+        observables_weights,  # Use the default observables_weights
     )
-
-    # function to edit O_weights
-    def set_custom_O_weights(custom_O_weights):
-        """
-        Overwrites O_weights to enable customisation in testing.
-        """
-        HMM.O_weights = custom_O_weights
-
-    # overwrite the O_weights if func is called
-    HMM.set_custom_O_weights = set_custom_O_weights
 
     # perform expectation maximisation
     HMM.baumwelch_expectationMaximisation(iter=1, update_pi=False, update_A=False, update_B=False, early_stopping=False)
 
     return HMM
-
-# @pytest.fixture
-# def run_BaumWelch(O_weights_param=None):
-
-#     """
-#     Runs the initiates the BaumWelch object and runs 1 iteration of expectation maximisation. The results are used in testing.
-#     """
-
-#     # create the HMM object
-#     HMM = BaumWelch(
-#         Z,
-#         O_R,
-#         pi,
-#         A,
-#         B_R,
-#         O_weights_param if O_weights_param is not None else O_weights,
-#     )
-
-#     # perform expectation maximisation
-#     HMM.baumwelch_expectationMaximisation(iter=1, update_pi=False, update_A=False, update_B=False, early_stopping=False)
-
-#     return HMM
 
 def test_forwards_compute(run_BaumWelch):
 
@@ -221,49 +188,61 @@ def test_xi_compute(run_BaumWelch):
 
     assert np.allclose(HMM.xi, xi, rtol=1e-06, atol=1e-08, equal_nan=False), "`gamma` array from `gamma_compute` is not matching."
 
-@pytest.mark.parametrize("O_weights", [[100, 0], [75, 25], [50, 50], [25, 75], [0, 100]])
-def test_expectationMaximisation_inference(run_BaumWelch, O_weights):
+@pytest.mark.parametrize("observables_weights", [[100, 0], [75, 25], [50, 50], [25, 75], [0, 100]])
+def test_expectationMaximisation_inference(observables_weights):
 
-    # create HMM object with different O_weights
-    run_BaumWelch.set_custom_O_weights(O_weights)
-    HMM = run_BaumWelch
+    """
+    Test the weighted averaging of gamma for performing inference.
+    """
 
-    # perform inference - have to re-specify the weights here as HMM object was already instantiated with default weights [1:1], and have then been overwritten
-    Z0_prob, Z1_prob, Z_inference, gamma_meanR = HMM.Z_state_probs_inference(weights=O_weights)
+    # create HMM object with different observables_weights
+    HMM = BaumWelch(
+        Z,
+        O_R,
+        pi,
+        A,
+        B_R,
+        observables_weights=observables_weights,
+    )
 
-    assert sum(HMM.O_weights)==100
-    assert HMM.O_weights==O_weights
+    # check weights have been automatically normalised
+    assert sum(HMM.observables_weights)==1, "BaumWelch class should normalise all weights values such that their sum equals 1.0."
+
+    # perform expectation maximisation
+    HMM.baumwelch_expectationMaximisation(iter=1, update_pi=False, update_A=False, update_B=False, early_stopping=False)
+
+    # perform inference - the class should automatically use weights specify at instantiation
+    _, _, _, gamma_meanR = HMM.Z_state_probs_inference()
 
     # extract the gamma array
     gamma = HMM.gamma
 
-    gamma_meanR_test              = np.zeros((N,T), dtype=np.float64)
+    # instantiate gamma arrays for manually computing weighted gamma arrays
     gamma_meanR_test_weighted     = np.zeros((N,T), dtype=np.float64)
     gamma_meanR_test_weighted_ave = np.zeros((N,T), dtype=np.float64)
-    Z_inference_test              = np.zeros((1,T), dtype=np.int64)
 
     # manually normalise the weighting arrays
-    weights_min      = min(O_weights)
-    weights_max      = max(O_weights)
+    weights_min      = min(observables_weights)
+    weights_max      = max(observables_weights)
+
+    # if-else statement to avoid division by 0
     if weights_min == 0:
-        weights_norm = [weight/weights_max for weight in O_weights]
+        weights_norm = [weight/weights_max for weight in observables_weights]
     else:
-        weights_norm = [weight/weights_min for weight in O_weights]
+        weights_norm = [weight/weights_min for weight in observables_weights]
+
+    # normalise
     weights_norm_sum = sum(weights_norm)
     weights_norm     = [weight/weights_norm_sum for weight in weights_norm]
 
-    # weights_sum = sum(weights)
+    # compute weighted gamma quanity for all Zi and t
     for i in range(N):
         for t in range(T):
-
-            gamma_meanR_test[i,t]          = (gamma[i,t,0] + gamma[i,t,1])/2
             gamma_meanR_test_weighted[i,t] = (gamma[i,t,0]*weights_norm[0] + gamma[i,t,1]*weights_norm[1])
 
+    # compute using Numpy's average func (should be the same)
+    gamma_meanR_test_weighted_ave = np.average(gamma, axis=-1, weights=observables_weights)
 
-    gamma_meanR_test_weighted_ave = np.average(gamma, axis=-1, weights=O_weights)
-
-    # check all these quantities
+    # check all these quantities against those calculated within the BaumWelch package
     assert np.allclose(gamma_meanR, gamma_meanR_test_weighted, rtol=1e-06, atol=1e-08, equal_nan=False)
     assert np.allclose(gamma_meanR, gamma_meanR_test_weighted_ave, rtol=1e-06, atol=1e-08, equal_nan=False)
-
-    ############## NEED TO DO Z_INFERENCE! ##################
