@@ -11,6 +11,9 @@ description = "Expectation maximisation and inference for hidden Markov models w
 readme = "README.md"
 requires-python = ">=3.9"
 
+[tool.poetry.dependencies]
+numpy = "*"
+scipy = "*"
 
 [project.urls]
 "Homepage" = "https://github.com/george-stanley/hmmBaumWelch"
