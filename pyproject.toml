@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "hmmBaumWelch"
 version = "0.1"
 authors = [{name="George Stanley", email="georgejjstanley@gmail.com"}]
 maintainers = [{name="George Stanley", email="georgejjstanley@gmail.com"}]
-description = "Expectation maximisation and inference for hidden Markov models with discrete observed variables."
+description = "Expectation maximisation and inference for hidden Markov models with one or multiple variables."
 readme = "README.md"
 requires-python = ">=3.9"
 
