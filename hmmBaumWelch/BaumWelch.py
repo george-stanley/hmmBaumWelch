@@ -728,7 +728,7 @@ class BaumWelch:
         iter: int = 1,
         update_pi: bool = True,
         update_A: bool = True,
-        update_B: bool = True,
+        update_B: bool = False,
         early_stopping: bool=True,
         log_likelihood_p_delta: float=0.005,
         rolling_deltas: int=3,
@@ -743,11 +743,17 @@ class BaumWelch:
         iter : int, default=1
             Iterations of expectation maximisation for the Baum-Welch algorithm.
         update_pi : bool, default=True
-            Whether to update the initial state probabilities.
+            Update the initial state probabilities upon each iteration.
         update_A : bool, default=True
-            Whether to update the transition state probabilities.
-        update_B : bool, default=True
-            Whether to update the emission probabilities.
+            Update the transition state probabilities.
+        update_B : bool, default=False
+            Update the emission probabilities.
+        early_stopping: bool, default=True
+            Stops before `iter` reached if meets the `log-likelihood-p-delta` threshold.
+        log_likelihood_p_delta: float=0.005
+            Dedault threshold; the smaller the value, the greater the optimisation.
+        rolling_deltas: int=3
+            A rolling average over `rolling_deltas` time points.
         """
 
         if update_B and self.priors_as_array is False:
