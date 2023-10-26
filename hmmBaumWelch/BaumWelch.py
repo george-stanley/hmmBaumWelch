@@ -1,6 +1,5 @@
 import scipy
 import numpy as np
-# from scipy import stats
 from typing import Union
 from scipy.stats._continuous_distns import rv_histogram
 from scipy.stats._distn_infrastructure import rv_discrete_frozen, rv_continuous_frozen
