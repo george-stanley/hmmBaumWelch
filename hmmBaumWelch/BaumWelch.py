@@ -1,5 +1,6 @@
+import scipy
 import numpy as np
-from scipy import stats
+# from scipy import stats
 from typing import Union
 from scipy.stats._continuous_distns import rv_histogram
 from scipy.stats._distn_infrastructure import rv_discrete_frozen, rv_continuous_frozen
@@ -159,7 +160,7 @@ class BaumWelch:
                         raise
 
             # if all tests passed, turn into arrays to improve expectation maximisation performance
-            self.priors_to_array()
+            self.__priors_to_array()
 
         # store useful probabilities and inferences when calculated
         self.gamma = None
@@ -176,7 +177,7 @@ class BaumWelch:
 
         return f"{self.N} hidden states; {self.T} time points; initial state probability P(Z0) = {self.pi[0]}; transition probs: Z0 -> Z0 = {self.A[0,0].round(decimals=3)} and Z1 -> Z1 = {self.A[1,1].round(decimals=3)}."
 
-    def B_oi(
+    def __B_oi(
         self,
             B: arrays_scipy_typeHint,
             zi: int,
@@ -227,7 +228,7 @@ class BaumWelch:
 
         return b_oi
 
-    def priors_to_array(self):
+    def __priors_to_array(self):
 
         """
         Converts prior distributions from Scipy functions into np.ndarrays. This improves performance during expectation maximisation.
@@ -315,7 +316,7 @@ class BaumWelch:
 
             # initalisation
             for i in self.Z:
-                alpha_log[i, 0] = np.log(self.pi[i]) + np.log(self.B_oi(B, i, O[0]))
+                alpha_log[i, 0] = np.log(self.pi[i]) + np.log(self.__B_oi(B, i, O[0]))
 
             # recursion with log-sum-exp trick
             alpha_paths = np.zeros(
@@ -336,7 +337,7 @@ class BaumWelch:
                     alpha_paths = np.exp(alpha_paths - c)
 
                     # calculate log of alpha
-                    alpha_log[i, t + 1] = np.log(self.B_oi(B, i, O[t + 1])) + (
+                    alpha_log[i, t + 1] = np.log(self.__B_oi(B, i, O[t + 1])) + (
                         c + np.log(np.sum(alpha_paths))
                     )
 
@@ -386,7 +387,7 @@ class BaumWelch:
                         beta_paths[j, 0] = (
                             beta_log[j, t + 1]
                             + np.log(self.A[i, j])
-                            + np.log(self.B_oi(B, j, O[t + 1]))
+                            + np.log(self.__B_oi(B, j, O[t + 1]))
                         )
 
                     # extract a constant for the log-sum-exp trick
@@ -522,7 +523,7 @@ class BaumWelch:
                             alpha_log[k, t]
                             + np.log(self.A[k, w])
                             + beta_log[w, t + 1]
-                            + np.log(self.B_oi(B, w, O[t + 1]))
+                            + np.log(self.__B_oi(B, w, O[t + 1]))
                         )
 
                 # extract a constant for log-sum-exp
@@ -624,7 +625,7 @@ class BaumWelch:
 
         return log_likelihood_alpha
 
-    def B_update(self, gamma: np.ndarray, B: np.ndarray, O: list[int]):
+    def __B_update(self, gamma: np.ndarray, B: np.ndarray, O: list[int]):
 
         """
         Computes the expected emission probabilities, given gamma and the sequence of observed variables, O.
@@ -667,7 +668,7 @@ class BaumWelch:
 
         return B_update
 
-    def pi_multiple_obs_update(self, gamma: np.ndarray) -> list[float]:
+    def __pi_multiple_obs_update(self, gamma: np.ndarray) -> list[float]:
 
         """
         Extracts the updated inital state probabilities, pi, from gamma.
@@ -691,7 +692,7 @@ class BaumWelch:
         else:
             return gamma[:, 0, :].mean(axis=-1).tolist()
 
-    def A_multiple_obs_update(self, gamma: np.ndarray, xi: np.ndarray) -> np.ndarray:
+    def __A_multiple_obs_update(self, gamma: np.ndarray, xi: np.ndarray) -> np.ndarray:
 
         """
         Computes the expected transmission probabilities.
@@ -768,16 +769,16 @@ class BaumWelch:
 
             # update initial state probs, pi
             if update_pi:
-                self.pi = self.pi_multiple_obs_update(gamma)
+                self.pi = self.__pi_multiple_obs_update(gamma)
 
             # update transition probs
             if update_A:
-                self.A = self.A_multiple_obs_update(gamma, xi)
+                self.A = self.__A_multiple_obs_update(gamma, xi)
 
             # update emission probs (can only do so if Priors given as arrays)
             if update_B and self.priors_as_array:
                 self.B_list = [
-                    self.B_update(gamma[:, :, r], B, O)
+                    self.__B_update(gamma[:, :, r], B, O)
                     for r, (B, O) in enumerate(zip(self.B_list, self.O_list))
                 ]
 
