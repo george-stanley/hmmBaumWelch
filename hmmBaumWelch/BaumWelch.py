@@ -68,7 +68,8 @@ class BaumWelch:
 
     def __init__(
         self,
-        Z: set[int],
+        # Z: set[int],
+        N: int,
         O_list: list[list[int]],
         pi: list[float],
         A: np.ndarray,
@@ -81,8 +82,8 @@ class BaumWelch:
 
         Parameters
         ----------
-        Z : set[int]
-            The set of possible hidden Markov states (i.e. Z={0,1})
+        N: int
+            Number of hidden states.
         O_list : list[list[int]]
             List of R observed variables, i.e. R=number of observed variables.
         pi : list[float]
@@ -96,20 +97,20 @@ class BaumWelch:
         """
 
         # store HMM parameters as instance attributes
-        self.Z = Z
+        self.N = N
+        self.Z = {n for n in range(N)}
         self.O_list = O_list
         self.pi = pi
         self.A = A
         self.B_list = B_list
 
         # other useful constants to store as attributes
-        self.N = len(Z)
         self.T = len(O_list[0])
         self.R = len(O_list)
 
         # perform some quality checks on dims of inputs
         try:
-            assert (len(pi) == self.N) and (A.shape[0] == self.N) and (A.shape[1] == self.N), "Dimensions of `Z`, `pi`, and `A` must match."
+            assert (len(pi) == self.N) and (A.shape[0] == self.N) and (A.shape[1] == self.N), "Dimensions of `Z`, `pi`, and `A` must match and must equal N."
             assert len(O_list) == len(B_list), "Dimensions of `O_list` and `B_list` must match."
         except AssertionError:
             raise
