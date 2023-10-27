@@ -17,7 +17,6 @@ B_i0_r1: [0.25, 0.075, 0.15]
 B_i1_r1: [0.10, 0.25, 0.10]
 
 # HMM starting parameters (set of hidden states; probability of starting in state Z0; transition probs: P(Z0 -> Z0) and P(Z1 ->Z1))
-Z: [0, 1]
 pi_Z0: 0.5
 A_Z0_Z0: 0.8
 A_Z1_Z1: 0.8

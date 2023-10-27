@@ -56,8 +56,6 @@ pi = [params['pi_Z0'], 1-params['pi_Z0']]
 
 observables_weights = params['observables_weights'] # treat each variable equally
 
-Z = set(params['Z']) # set of hidden states
-
 @pytest.fixture
 def run_BaumWelch():
     """
@@ -66,7 +64,7 @@ def run_BaumWelch():
     """
     # create the HMM object
     HMM = BaumWelch(
-        Z,
+        N,
         O_R,
         pi,
         A,
@@ -210,7 +208,7 @@ def test_expectationMaximisation_inference(observables_weights):
 
     # create HMM object with different observables_weights
     HMM = BaumWelch(
-        Z,
+        N,
         O_R,
         pi,
         A,
@@ -257,5 +255,5 @@ def test_expectationMaximisation_inference(observables_weights):
     gamma_meanR_test_weighted_ave = np.average(gamma, axis=-1, weights=observables_weights)
 
     # check all these quantities against those calculated within the BaumWelch package
-    assert np.allclose(gamma_meanR, gamma_meanR_test_weighted, rtol=1e-06, atol=1e-08, equal_nan=False)
-    assert np.allclose(gamma_meanR, gamma_meanR_test_weighted_ave, rtol=1e-06, atol=1e-08, equal_nan=False)
+    assert np.allclose(gamma_meanR, gamma_meanR_test_weighted, rtol=1e-06, atol=1e-08, equal_nan=False), "Weighted gamma values giving unexpected values."
+    assert np.allclose(gamma_meanR, gamma_meanR_test_weighted_ave, rtol=1e-06, atol=1e-08, equal_nan=False), "Weighted gamma values giving unexpected values."
