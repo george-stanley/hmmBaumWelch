@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "hmmBaumWelch"
-version = "0.1.8.4"
+version = "0.0.1"
 description = "Expectation maximisation and inference for hidden Markov models with one or multiple variables."
 authors = ["George Stanley <georgejjstanley@gmail.com>"]
 maintainers = ["George Stanley <georgejjstanley@gmail.com>"]
