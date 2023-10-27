@@ -9,7 +9,7 @@ The package is designed to work with SciPy's probability distribution functions 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install hmmBaumWelch.
 
 ```bash
-pip install -i https://test.pypi.org/simple/ hmmBaumWelch
+pip install hmmBaumWelch
 ```
 
 ## Usage
@@ -23,7 +23,7 @@ For examples of package implementation, see the `examples` directory.
 When instantiating the BaumWelch object, several arguments are expected:
 
 1. N: the number of hidden states within the system. E.g., if N=2, Zi will be in set {0,1}.
-2. O_list: a list of list representing each observed, numeric variable. These can be continuous or discreet, but must contain real numbers. They must also be of equal lengths.
+2. O_list: a list of lists representing each observed, numeric variable. These can be continuous or discreet, but must contain real numbers. They must also be of equal lengths.
 3. pi: the starting probabilities (i.e. at t=0) for all hidden states. This is a list of length=N.
 4. A: the transition state matrix: a square numpy array, in which each dimension is equal to the number of states N. Each position represents the probability of transitioning between states, i.e., A(0,0) = P(Zi=0,t=t, Zi=0,t=t+1) - the probability that a hidden state will remain in Zi=0 from one time point to the next. Therefore each row of A must sum to one.
 5. B_list: a list of prior probability distributions for each variable and all hidden states. These probability distributions can be defined straight from the Scipy package.

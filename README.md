@@ -9,7 +9,7 @@ The package is designed to work with SciPy's probability distribution functions 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install hmmBaumWelch.
 
 ```bash
-pip install -i https://test.pypi.org/simple/ hmmBaumWelch
+pip install hmmBaumWelch
 ```
 
 ## Usage
