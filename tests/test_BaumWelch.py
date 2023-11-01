@@ -4,64 +4,78 @@ import pytest
 import numpy as np
 from hmmBaumWelch import BaumWelch
 
-# find directory of this file
-directory = os.path.dirname(__file__)
+@pytest.fixture()
+def variables_BaumWelch():
 
-# load contents of the yaml file
-with open(os.path.join(directory, 'test_BaumWelch_params.yaml'), 'r') as f:
-    params = yaml.safe_load(f)
+    """
+    Defines the variables, imported from the `test_BaumWelch_params.yaml`, and returns them for easy implementation throughout the testing module.
+    """
 
-# define class attributes as the data to be used throughout the testing class
-N = params['N'] # number of hidden states
-T = params['T'] # number of time points in data
-K = params['K'] # number of different values of a variable - deliberately set to equal T for both variables
-R = params['R'] # number of observed variables
+    # find directory of this file
+    directory = os.path.dirname(__file__)
 
-# observed variables
-O0 = params['O0']
-O1 = params['O1']
+    # load contents of the yaml file
+    with open(os.path.join(directory, 'test_BaumWelch_params.yaml'), 'r') as f:
+        params = yaml.safe_load(f)
 
-# the list of observed variables
-O_R = [O0, O1]
+    # define class attributes as the data to be used throughout the testing class
+    N = params['N'] # number of hidden states
+    T = params['T'] # number of time points in data
+    K = params['K'] # number of different values of a variable - deliberately set to equal T for both variables
+    R = params['R'] # number of observed variables
 
-# priors
-B0 = np.zeros((N,K,2), dtype=np.float64)
-B1 = np.zeros((N,K,2), dtype=np.float64)
+    # observed variables
+    O0 = params['O0']
+    O1 = params['O1']
 
-# for Z_{i}=0
-B0[0,:,0] = O0
-B0[0,:,1] = params['B_i0_r0']  # [0.4, 0.025, 0.3] # concomitant probs in second
+    # the list of observed variables
+    O_R = [O0, O1]
 
-# repeat for Z_{i}=1
-B0[1,:,0] = O0
-B0[1,:,1] = params['B_i1_r0'] # [0.05, 0.4, 0.05] # concomitant probs in second
+    # priors
+    B0 = np.zeros((N,K,2), dtype=np.float64)
+    B1 = np.zeros((N,K,2), dtype=np.float64)
 
-# repeat for prior of second observable
-# for Z_{i}=0
-B1[0,:,0] = O1
-B1[0,:,1] = params['B_i0_r1'] # [0.25, 0.075, 0.15] # concomitant probs in second
+    # for Z_{i}=0
+    B0[0,:,0] = O0
+    B0[0,:,1] = params['B_i0_r0']  # [0.4, 0.025, 0.3] # concomitant probs in second
 
-# repeat for Z_{i}=1
-B1[1,:,0] = O1
-B1[1,:,1] = params['B_i1_r1']  # [0.10, 0.25, 0.10] # concomitant probs in second
+    # repeat for Z_{i}=1
+    B0[1,:,0] = O0
+    B0[1,:,1] = params['B_i1_r0'] # [0.05, 0.4, 0.05] # concomitant probs in second
 
-# add together in list
-B_R = [B0, B1]
+    # repeat for prior of second observable
+    # for Z_{i}=0
+    B1[0,:,0] = O1
+    B1[0,:,1] = params['B_i0_r1'] # [0.25, 0.075, 0.15] # concomitant probs in second
 
-# define starting params for HMM
-A = np.array([[params['A_Z0_Z0'], 1-params['A_Z0_Z0']],
-            [1-params['A_Z1_Z1'], params['A_Z1_Z1']]], dtype=np.float64)
+    # repeat for Z_{i}=1
+    B1[1,:,0] = O1
+    B1[1,:,1] = params['B_i1_r1']  # [0.10, 0.25, 0.10] # concomitant probs in second
 
-pi = [params['pi_Z0'], 1-params['pi_Z0']]
+    # add together in list
+    B_R = [B0, B1]
 
-observables_weights = params['observables_weights'] # treat each variable equally
+    # define starting params for HMM
+    A = np.array([[params['A_Z0_Z0'], 1-params['A_Z0_Z0']],
+                [1-params['A_Z1_Z1'], params['A_Z1_Z1']]], dtype=np.float64)
+
+    pi = [params['pi_Z0'], 1-params['pi_Z0']]
+
+    observables_weights = params['observables_weights'] # treat each variable equally
+
+    return N, T, K, R, O_R, pi, A, B_R, observables_weights
 
 @pytest.fixture
-def run_BaumWelch():
+def run_BaumWelch(variables_BaumWelch):
+
     """
     Runs the initiates the BaumWelch object and runs 1 iteration of expectation maximisation.
     The results are used in testing.
     """
+
+    # grab the variables
+    N, _, _, _, O_R, pi, A, B_R, observables_weights = variables_BaumWelch
+
     # create the HMM object
     HMM = BaumWelch(
         N,
@@ -77,13 +91,16 @@ def run_BaumWelch():
 
     return HMM
 
-def test_forwards_compute(run_BaumWelch):
+def test_forwards_compute(variables_BaumWelch, run_BaumWelch):
 
     """
     Test the forwards compute function, producing alpha_log, without using the "log-sum-exp" trick.
 
     - alpha_{i}(t) = P(o_{1:t}, Z_{t} | theta), and where theta = (A,B,pi).
     """
+
+    # grab the variables
+    N, T, _, R, _, pi, A, B_R, _ = variables_BaumWelch
 
     # get the HMM object from the fixture
     HMM = run_BaumWelch
@@ -107,13 +124,16 @@ def test_forwards_compute(run_BaumWelch):
     # compare with results from BaumWelch package
     assert np.allclose(HMM.alpha_log, alpha_log, rtol=1e-06, atol=1e-08, equal_nan=False), "`alpha_log` array from `forwards_compute` is not matching."
 
-def test_backwards_compute(run_BaumWelch):
+def test_backwards_compute(variables_BaumWelch, run_BaumWelch):
 
     """
     Test the backwards compute function, producing beta_log, without using the "log-sum-exp" trick.
 
     - beta_{i}(t) = P(o_{t+1:T} | Z_{t}=i, theta), and where theta = (A,B,pi).
     """
+
+    # grab the variables
+    N, T, _, R, _, _, A, B_R, _ = variables_BaumWelch
 
     # get the HMM object from the fixture
     HMM = run_BaumWelch
@@ -136,13 +156,16 @@ def test_backwards_compute(run_BaumWelch):
 
     assert np.allclose(HMM.beta_log, beta_log, rtol=1e-06, atol=1e-08, equal_nan=False), "`beta_log` array from `backwards_compute` is not matching."
 
-def test_gamma_compute(run_BaumWelch):
+def test_gamma_compute(variables_BaumWelch, run_BaumWelch):
 
     """
     Test the gamma compute function, without using the "log-sum-exp" trick.
 
     - gamma_{i}(t) = P(Z_{t}=i | O, theta) = P(Z_{t}=i, O | theta) / P(O | theta)
     """
+
+    # grab the variables
+    N, T, _, R, _, _, _, _, _ = variables_BaumWelch
 
     # get the HMM object from the fixture
     HMM = run_BaumWelch
@@ -162,13 +185,16 @@ def test_gamma_compute(run_BaumWelch):
 
     assert np.allclose(HMM.gamma, gamma, rtol=1e-06, atol=1e-08, equal_nan=False), "`gamma` array from `gamma_compute` is not matching."
 
-def test_xi_compute(run_BaumWelch):
+def test_xi_compute(variables_BaumWelch, run_BaumWelch):
 
     """
     Test the xi compute function.
 
     - xi_{ij}(t) = P(Z_{t}=i, Z_{t+1}=j| O, theta) = P(Z_{t}=i, Z_{t+1}=j, O | theta) / P(O | theta)
     """
+
+    # grab the variables
+    N, T, _, R, _, _, A, B_R, _ = variables_BaumWelch
 
     # get the HMM object from the fixture
     HMM = run_BaumWelch
@@ -200,11 +226,14 @@ def test_xi_compute(run_BaumWelch):
     assert np.allclose(HMM.xi, xi, rtol=1e-06, atol=1e-08, equal_nan=False), "`gamma` array from `gamma_compute` is not matching."
 
 @pytest.mark.parametrize("observables_weights", [[100, 0], [75, 25], [50, 50], [25, 75], [0, 100]])
-def test_expectationMaximisation_inference(observables_weights):
+def test_expectationMaximisation_inference(variables_BaumWelch, observables_weights):
 
     """
     Test the weighted averaging of gamma for performing inference.
     """
+
+    # grab the variables
+    N, T, _, _, O_R, pi, A, B_R, observables_weights = variables_BaumWelch
 
     # create HMM object with different observables_weights
     HMM = BaumWelch(
